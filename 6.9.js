@@ -1,10 +1,11 @@
-// 6.9影视 - TVBox 蜂蜜版 调试版 (先用静态数据验证JS执行)
-function jp(o) {
-  if (typeof jsonParse === 'function') return jsonParse(o);
-  return JSON.stringify(o);
-}
+// 6.9影视 - TVBox 蜂蜜版 (FongMi) type:3 JS Spider
+// Function signatures follow FongMi SPIDER.md spec
 
-function init(extend) {}
+var API_URL = '';
+
+function init(context, extend) {
+  API_URL = extend || '';
+}
 
 function homeContent(filter) {
   var classList = [
@@ -18,18 +19,25 @@ function homeContent(filter) {
     { vod_id: '1', vod_name: '测试视频1', vod_pic: 'https://via.placeholder.com/200x300', vod_remarks: '测试' },
     { vod_id: '2', vod_name: '测试视频2', vod_pic: 'https://via.placeholder.com/200x300', vod_remarks: '测试' }
   ];
-  return jp({ class: classList, list: list });
+  return JSON.stringify({ class: classList, list: list });
+}
+
+function homeVideoContent() {
+  var list = [
+    { vod_id: '1', vod_name: '首页推荐1', vod_pic: 'https://via.placeholder.com/200x300', vod_remarks: '推荐' }
+  ];
+  return JSON.stringify({ list: list });
 }
 
 function categoryContent(tid, pg, filter, extend) {
   var list = [
     { vod_id: '1', vod_name: '分类视频1', vod_pic: 'https://via.placeholder.com/200x300', vod_remarks: '测试' }
   ];
-  return jp({ list: list, page: String(pg) });
+  return JSON.stringify({ list: list, page: String(pg) });
 }
 
 function detailContent(ids) {
-  return jp({ list: [{
+  return JSON.stringify({ list: [{
     vod_id: '1',
     vod_name: '测试视频',
     vod_pic: 'https://via.placeholder.com/200x300',
@@ -38,10 +46,10 @@ function detailContent(ids) {
   }] });
 }
 
-function searchContent(key, quick, pg) {
-  return jp({ list: [], page: '1' });
+function searchContent(key, quick) {
+  return JSON.stringify({ list: [], page: '1' });
 }
 
 function playerContent(flag, id, vipFlags) {
-  return jp({ url: id, parse: 0 });
+  return JSON.stringify({ url: id, parse: 0 });
 }

@@ -1,13 +1,13 @@
 // 6.9影视 - TVBox 蜂蜜版 (FongMi) type:3 JS Spider
-// Function signatures follow FongMi SPIDER.md spec
+// Function names match FongMi Spider.java call() invocations
 
 var API_URL = '';
 
-function init(context, extend) {
-  API_URL = extend || '';
+function init(ext) {
+  API_URL = ext || '';
 }
 
-function homeContent(filter) {
+function home(filter) {
   var classList = [
     { type_id: '9', type_name: '性感佳人' },
     { type_id: '10', type_name: '国产精品' },
@@ -22,21 +22,21 @@ function homeContent(filter) {
   return JSON.stringify({ class: classList, list: list });
 }
 
-function homeVideoContent() {
+function homeVod() {
   var list = [
     { vod_id: '1', vod_name: '首页推荐1', vod_pic: 'https://via.placeholder.com/200x300', vod_remarks: '推荐' }
   ];
   return JSON.stringify({ list: list });
 }
 
-function categoryContent(tid, pg, filter, extend) {
+function category(tid, pg, filter, extend) {
   var list = [
     { vod_id: '1', vod_name: '分类视频1', vod_pic: 'https://via.placeholder.com/200x300', vod_remarks: '测试' }
   ];
   return JSON.stringify({ list: list, page: String(pg) });
 }
 
-function detailContent(ids) {
+function detail(id) {
   return JSON.stringify({ list: [{
     vod_id: '1',
     vod_name: '测试视频',
@@ -46,10 +46,44 @@ function detailContent(ids) {
   }] });
 }
 
-function searchContent(key, quick) {
+function search(key, quick, pg) {
   return JSON.stringify({ list: [], page: '1' });
 }
 
-function playerContent(flag, id, vipFlags) {
+function play(flag, id, vipFlags) {
   return JSON.stringify({ url: id, parse: 0 });
 }
+
+function live(url) {
+  return '';
+}
+
+function sniffer() {
+  return false;
+}
+
+function isVideo(url) {
+  return false;
+}
+
+function action(actionArg) {
+  return '';
+}
+
+function destroy() {
+}
+
+var __JS_SPIDER__ = {
+  init: init,
+  home: home,
+  homeVod: homeVod,
+  category: category,
+  detail: detail,
+  search: search,
+  play: play,
+  live: live,
+  sniffer: sniffer,
+  isVideo: isVideo,
+  action: action,
+  destroy: destroy
+};

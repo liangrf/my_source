@@ -127,7 +127,7 @@ export function __jsEvalReturn() {
           vod_class: '',
           type_name: '',
           vod_play_from: '6.9影视',
-          vod_play_url: (data.title || '播放') + '$' + videoUrl
+          vod_play_url: '正片$' + videoUrl
         }]
       });
     },

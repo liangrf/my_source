@@ -45,7 +45,7 @@ async function request(url) {
 }
 
 function safeParse(str) {
-  try { return jsonParse ? jsonParse(str) : JSON.parse(str); } catch (e) { return null; }
+  try { return JSON.parse(str); } catch (e) { return null; }
 }
 
 // ========== 数据获取函数 ==========

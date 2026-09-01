@@ -45,7 +45,7 @@ async function request(url) {
 }
 
 function safeParse(str) {
-  try { return JSON.parse(str); } catch (e) { return null; }
+  try { return (typeof jsonParse === 'function') ? jsonParse(str) : JSON.parse(str); } catch (e) { return null; }
 }
 
 // ========== 数据获取函数 ==========
@@ -139,7 +139,7 @@ export function __jsEvalReturn() {
     play: async function(flag, id, vipFlags) {
       var url = id;
       if (url && url.indexOf('$') > -1) url = url.split('$')[1];
-      return JSON.stringify({ url: url, parse: 0 });
+      return JSON.stringify({ url: url, parse: 0, header: { 'User-Agent': UA, 'Referer': HOST } });
     },
 
     live: function(url) { return ''; },

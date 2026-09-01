@@ -139,7 +139,7 @@ export function __jsEvalReturn() {
     play: async function(flag, id, vipFlags) {
       var url = id;
       if (url && url.indexOf('$') > -1) url = url.split('$')[1];
-      return JSON.stringify({ url: url, parse: 0 });
+      return JSON.stringify({ url: url, parse: 1 });
     },
 
     live: function(url) { return ''; },

@@ -16,7 +16,7 @@ var CATEGORIES = [
   { type_id: '17', type_name: '全部' }
 ];
 
-// ========== HTTP 请求封装 ==========
+// ========== HTTP 请求 ==========
 
 async function request(url) {
   try {
@@ -27,129 +27,86 @@ async function request(url) {
   }
 }
 
-function safeParse(str) {
-  try { return JSON.parse(str); } catch (e) { return null; }
+// ========== HTML 解析 ==========
+
+// 从列表页提取视频
+function parseListHtml(html) {
+  if (!html) return [];
+  var list = [];
+  // 提取 SvelteKit 内嵌数据中的 vods
+  var dataMatch = html.match(/vods:\s*\[([\s\S]*?)\]\s*,\s*(?:totalPages|prerendered)/);
+  if (dataMatch) {
+    // 逐个提取 vod 对象
+    var vodRegex = /\{id:(\d+),name:"([^"]*)",pic:"([^"]*)"[^}]*?(?:remarks:"([^"]*)",)?[^}]*?m3u8:"([^"]*)"[^}]*?playUrl:"([^"]*)"[^}]*?sourceKey:"(\d+)"/g;
+    var m;
+    while ((m = vodRegex.exec(dataMatch[0])) !== null) {
+      list.push({
+        vod_id: m[7] + '-' + m[1],
+        vod_name: m[2],
+        vod_pic: m[3],
+        vod_remarks: m[4] || ''
+      });
+    }
+  }
+  return list;
 }
 
-// 从 HTML 中提取内嵌的 SvelteKit JSON 数据
-function extractData(html) {
+// 从详情页提取 m3u8
+function parseDetailHtml(html, id) {
   if (!html) return null;
-  // 匹配 data: { type:"data", data:{ ... vods:[...] ... } }
-  var match = html.match(/data:\s*\{type:"data",data:\{([^]*?)\},uses:/);
-  if (!match) return null;
-  try {
-    var obj = JSON.parse('{' + match[1] + '}');
-    return obj;
-  } catch (e) {
-    return null;
-  }
-}
-
-// ========== 数据获取函数 ==========
-
-async function fetchList(sourceKey, pg) {
-  try {
-    var url = HOST + '/category?source=' + sourceKey + '&page=' + pg;
-    var html = await request(url);
-    if (!html) return [];
-    
-    var data = extractData(html);
-    if (!data || !data.vods) return [];
-    
-    var list = [];
-    for (var i = 0; i < data.vods.length; i++) {
-      var item = data.vods[i];
-      // vod_id 格式: sourceKey-id（用于 detail 请求）
-      list.push({
-        vod_id: sourceKey + '-' + item.id,
-        vod_name: item.name || '',
-        vod_pic: item.pic || '',
-        vod_remarks: item.remarks || item.type || ''
-      });
+  // 标题
+  var titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+  var name = titleMatch ? titleMatch[1].trim() : '';
+  // 封面
+  var picMatch = html.match(/og:image"\s+content="([^"]*)"/);
+  var pic = '';
+  if (picMatch) {
+    pic = picMatch[1];
+    if (pic.indexOf('/api/img?url=') > -1) {
+      pic = decodeURIComponent(pic.split('/api/img?url=')[1].split('&')[0]);
     }
-    return list;
-  } catch (e) {
-    return [];
   }
+  // m3u8 - 从 "直接播放" 链接
+  var m3u8Match = html.match(/href="(https?:\/\/[^"]*\.m3u8[^"]*)"[^>]*>[^<]*直接播放/);
+  var m3u8 = m3u8Match ? m3u8Match[1] : '';
+  // 备注（时长）
+  var remarksMatch = html.match(/<span[^>]*>([\d:]+)<\/span>/);
+  var remarks = remarksMatch ? remarksMatch[1] : '';
+
+  return { id: id, name: name, pic: pic, m3u8: m3u8, remarks: remarks };
 }
 
-// 获取某个 source 的子分类
-async function fetchClasses(sourceKey) {
-  try {
-    var url = HOST + '/category?source=' + sourceKey;
-    var html = await request(url);
-    if (!html) return [];
-    
-    var data = extractData(html);
-    if (!data || !data.classes) return [];
-    
-    var list = [];
-    for (var i = 0; i < data.classes.length; i++) {
-      var cls = data.classes[i];
-      list.push({
-        type_id: String(cls.id),
-        type_name: cls.name
-      });
-    }
-    return list;
-  } catch (e) {
-    return [];
-  }
-}
-
-async function fetchDetail(id) {
-  try {
-    var url = HOST + '/' + id;
-    var html = await request(url);
-    if (!html) return null;
-    
-    var data = extractData(html);
-    if (!data || !data.vods || data.vods.length === 0) return null;
-    
-    var item = data.vods[0];
-    return {
-      id: id,
-      name: item.name || '',
-      pic: item.pic || '',
-      m3u8: item.m3u8 || '',
-      playUrl: item.playUrl || '',
-      remarks: item.remarks || ''
-    };
-  } catch (e) {
-    return null;
-  }
-}
-
-// ========== Spider 方法 ==========
+// ========== Spider ==========
 
 export function __jsEvalReturn() {
   return {
     init: async function(ext) {},
 
     home: async function(filter) {
-      // 首页：显示所有 source 作为分类，加载 source=17（全部）的视频
-      var list = await fetchList('17', 1);
+      var html = await request(HOST + '/category?source=17');
+      var list = parseListHtml(html);
       return JSON.stringify({ class: CATEGORIES, list: list });
     },
 
     homeVod: async function() {
-      var list = await fetchList('17', 1);
+      var html = await request(HOST + '/category?source=17');
+      var list = parseListHtml(html);
       return JSON.stringify({ list: list });
     },
 
     category: async function(tid, pg, filter, extend) {
-      // tid = sourceKey（11-41），直接用 source 参数请求
       var page = pg || 1;
-      var sourceKey = tid || '17';
-      var list = await fetchList(sourceKey, page);
+      var html = await request(HOST + '/category?source=' + (tid || '17') + '&page=' + page);
+      var list = parseListHtml(html);
       return JSON.stringify({ list: list, page: String(page) });
     },
 
     detail: async function(ids) {
       var id = (typeof ids === 'string') ? ids : (Array.isArray(ids) ? ids[0] : '');
       if (!id) return JSON.stringify({ list: [] });
-      var data = await fetchDetail(id);
-      if (!data) return JSON.stringify({ list: [] });
+      var html = await request(HOST + '/' + id);
+      var data = parseDetailHtml(html, id);
+      if (!data || !data.m3u8) return JSON.stringify({ list: [] });
       return JSON.stringify({
         list: [{
           vod_id: id,
@@ -162,7 +119,7 @@ export function __jsEvalReturn() {
           vod_class: '',
           type_name: '',
           vod_play_from: '爱播爱播',
-          vod_play_url: data.playUrl || ('正片$' + data.m3u8)
+          vod_play_url: '正片$' + data.m3u8
         }]
       });
     },
@@ -174,7 +131,11 @@ export function __jsEvalReturn() {
     play: async function(flag, id, vipFlags) {
       var url = id;
       if (url && url.indexOf('$') > -1) url = url.split('$')[1];
-      return JSON.stringify({ url: url, parse: 0, header: { 'User-Agent': UA } });
+      return JSON.stringify({
+        url: url,
+        parse: 0,
+        header: { 'User-Agent': UA, 'Referer': HOST + '/' }
+      });
     },
 
     live: function(url) { return ''; },
